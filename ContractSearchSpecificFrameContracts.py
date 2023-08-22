@@ -44,8 +44,8 @@ def getcontractsearchstring(contractdict):
 def filenameconsreportGridSpecific(grid):
     return (datetime.today()).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + grid + ".json"
 
-def filenameprodreportGridSpecific(grid):
-    return (datetime.today()).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_PROD_REPORT + "_" + grid + ".json"
+def filenameprodreportGridSpecific(grid,year):
+    return (datetime.today()).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_PROD_REPORT + "_" + grid + "_" + str(year) + ".json"
 
 def getPathConsReport():
     return "\\\\energycorp.com\\common\\divsede\\Operations\\Schedules\\Germany\\ConsumptionReportsPython\\"
@@ -74,85 +74,90 @@ def GetUrlContractSearchProdmaster(grid):
                         "Z and BALANCE eq 'INTRASED' and OUT_PARTY eq 'PRODMASTER[" + grid + "]' and OUT_AREA eq '" + grid + "'" + \
                         " and STATUS ne 'DELETED'"
 
-def GetUrlContractSearchProdmasterSpecificYear(grid, date_From, date_To):
+def GetUrlContractSearchProdmasterSpecificYear(grid, year):
    return "Contract?$" \
-                        + "filter=DATE_FROM lt " + (date_From.replace(tzinfo=None) + timedelta(days=0)).isoformat() + \
-                        "Z and DATE_TO ge " + (date_To.replace(tzinfo=None) + timedelta(days=0)).isoformat() + \
+                        + "filter=DATE_FROM lt " + (datetime.strptime(str(year) + '-01-01', '%Y-%m-%d') + timedelta(days=0)).isoformat() + \
+                        "Z and DATE_TO ge " + (datetime.strptime(str(year) + '-12-31', '%Y-%m-%d') + timedelta(days=0)).isoformat() + \
                         "Z and BALANCE eq 'INTRASED' and OUT_PARTY eq 'PRODMASTER[" + grid + "]' and OUT_AREA eq '" + grid + "'" + \
                         " and STATUS ne 'DELETED'"
 
-def GiveOutput(url,filename, date_From, date_To):
-    final_list = []
-    urlContractSearch = url
+def GiveOutput(url, filename):
+        final_list = []
 
-    responseContractSearchConsmaster = deltaXE.get(urlContractSearch).json()
+        responseContractSearchConsmaster = deltaXE.get(url).json()
 
-    for contracts in responseContractSearchConsmaster['value']:
+        for contracts in responseContractSearchConsmaster['value']:
 
-        internalId = contracts["CONTRACT_ID"]
+            timeseriesVolumes = []
 
-        name = contracts["NAME"]
+            internalId = contracts["CONTRACT_ID"]
 
-        cp = contracts["COUNTERPARTY"]
+            name = contracts["NAME"]
 
-        #if internalId < 100000 and cp == 'GARATH':
-        timeseriesVolumes = []
-        if name == 'spFRObRdIu':
-            urlContratLineSearch = "ContractLine?$filter=CONTRACT_ID eq " + str(internalId)
-            responseContractLineSearch = deltaXE.get(urlContratLineSearch).json()
+            cp = contracts["COUNTERPARTY"]
 
-            for contractLines in responseContractLineSearch['value']:
+                # if internalId < 100000 and cp == 'GARATH':
+            if name != '':
 
-                contractLineID = str(contractLines['CONTRACT_LINE_ID'])
-                urlContractPositionSearch = "ContractPosition?$filter=CONTRACT_LINE_ID eq " + contractLineID
+                    date_From = datetime.strptime(str(year) + '-01-01', '%Y-%m-%d')
+                    date_To = datetime.strptime(str(year)+'-12-31', '%Y-%m-%d')
 
-                responseContractPositionSearch = deltaXE.get(urlContractPositionSearch).json()
+                    urlContratLineSearch = "ContractLine?$filter=CONTRACT_ID eq " + str(internalId)
+                    responseContractLineSearch = deltaXE.get(urlContratLineSearch).json()
 
-                for contractPosition in responseContractPositionSearch['value']:
+                    for contractLines in responseContractLineSearch['value']:
 
-                    if contractPosition['POSITION_TYPE'] == 'QUANTITY':
+                        contractLineID = str(contractLines['CONTRACT_LINE_ID'])
+                        urlContractPositionSearch = "ContractPosition?$filter=CONTRACT_LINE_ID eq " + contractLineID
 
-                        dateTo = (date_To.replace(tzinfo=None) + timedelta(0) + timedelta(
-                            hours=time_difference)).isoformat()
-                        dateFrom = (date_From.replace(tzinfo=None) + timedelta(0) + timedelta(
-                            hours=time_difference)).isoformat()
+                        responseContractPositionSearch = deltaXE.get(urlContractPositionSearch).json()
 
-                        positionID = str(contractPosition['POSITION_ID'])
+                        for contractPosition in responseContractPositionSearch['value']:
 
-                        # Known issue/feature: DateFrom & DateTo are switched
-                        urlContractLines = "TimeSeriesHour?$filter=POSITION_ID eq " + positionID + \
-                                           " and DATE_FROM lt " + dateTo + "Z and DATE_TO gt " + dateFrom + "Z"
-                        responseContractLines = deltaXE.get(urlContractLines).json()
+                            if contractPosition['POSITION_TYPE'] == 'QUANTITY':
 
-                        for contractLine in responseContractLines['value']:
-                            if contractLine['VALUE'] is None:
-                                pass
-                            else:
-                                # All values will be positive
-                                timeseriesVolumes.append(contractLine["VALUE"])
-            if sum(timeseriesVolumes) == 0:
-                myDict = {  "COUNTERPARTY": contracts["COUNTERPARTY"],
-                                "NAME": contracts["NAME"],
-                                "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
-                                "CONTROL_AREA": contracts["OUT_AREA"],
-                                "BALANCE": contracts["BALANCE"],
-                                "AGG_VOLUME": (sum(timeseriesVolumes) / 4),
-                                "VOLUME_TS": timeseriesVolumes}
+                                dateTo = (date_To.replace(tzinfo=None) + timedelta(0) + timedelta(
+                                    hours=time_difference)).isoformat()
+                                dateFrom = (date_From.replace(tzinfo=None) + timedelta(0) + timedelta(
+                                    hours=time_difference)).isoformat()
 
-                final_list.append(myDict)
+                                positionID = str(contractPosition['POSITION_ID'])
 
-    path = pathConsReport + filename
+                                # Known issue/feature: DateFrom & DateTo are switched
+                                urlContractLines = "TimeSeriesHour?$filter=POSITION_ID eq " + positionID + \
+                                                   " and DATE_FROM lt " + dateTo + "Z and DATE_TO gt " + dateFrom + "Z"
+                                responseContractLines = deltaXE.get(urlContractLines).json()
 
-    df = pd.DataFrame.from_dict(final_list)
-    df.to_json(path, orient='records', indent=True)
+                                for contractLine in responseContractLines['value']:
+                                    if contractLine['VALUE'] is None:
+                                        pass
+                                    else:
+                                        # All values will be positive
+                                        timeseriesVolumes.append(contractLine["VALUE"])
+                    if sum(timeseriesVolumes) == 0:
+                        # myDict = {  "COUNTERPARTY": contracts["COUNTERPARTY"],
+                        #                 "NAME": contracts["NAME"],
+                        #                 "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
+                        #                 "CONTROL_AREA": contracts["OUT_AREA"],
+                        #                 "BALANCE": contracts["BALANCE"],
+                        #                 "AGG_VOLUME": (sum(timeseriesVolumes) / 4),
+                        #                 "VOLUME_TS": timeseriesVolumes}
+
+                        myDict = {  "COUNTERPARTY": contracts["COUNTERPARTY"],
+                                        "NAME": contracts["NAME"],
+                                        "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
+                                        "CONTROL_AREA": contracts["OUT_AREA"],
+                                        "BALANCE": contracts["BALANCE"]}
+
+                        final_list.append(myDict)
+
+        path = pathConsReport + filename
+
+        df = pd.DataFrame.from_dict(final_list)
+        df.to_json(path, orient='records', indent=True)
 
 begin = datetime.today() + timedelta(days=0)
 date_from = pd.to_datetime(begin).normalize()
-
-date_stringStart2013 = '2013-01-01'
-date_stringEnd2013 = '2013-12-31'
-datetimeStart2013 = datetime.strptime(date_stringStart2013, '%Y-%m-%d')
-datetimeEnd2013 = datetime.strptime(date_stringEnd2013, '%Y-%m-%d')
 
 # time difference between UTC and Europe/Berlin
 # 1h or 2h
@@ -167,14 +172,29 @@ myDictGrids = GetListGrids()
 
 for grid in myDictGrids:
 
-    #urlConsmaster = GetUrlContractSearchConsmaster(grid)
+    years = []
+    years.append(2013)
+    years.append(2014)
+    years.append(2015)
+    years.append(2016)
+    years.append(2017)
+    years.append(2018)
+    years.append(2019)
+    years.append(2020)
+    years.append(2021)
+    years.append(2022)
+    years.append(2023)
 
-    urlProdmaster = GetUrlContractSearchProdmasterSpecificYear(grid,datetimeStart2013, datetimeEnd2013)
+    for year in years:
 
-    #filenameConsmaster = filenameconsreportGridSpecific(grid)
-    filenameProdmaster = filenameprodreportGridSpecific(grid)
+        urlContractSearch = GetUrlContractSearchProdmasterSpecificYear(grid, year)
 
-    #GiveOutput(urlConsmaster, filenameConsmaster, datetimeStart2013, datetimeEnd2013)
-    GiveOutput(urlProdmaster, filenameProdmaster, datetimeStart2013, datetimeEnd2013)
+        #urlConsmaster = GetUrlContractSearchConsmaster(grid)
+
+        #filenameConsmaster = filenameconsreportGridSpecific(grid)
+        filenameProdmaster = filenameprodreportGridSpecific(grid, year)
+
+        #GiveOutput(urlConsmaster, filenameConsmaster, datetimeStart2013, datetimeEnd2013)
+        GiveOutput(urlContractSearch,filenameProdmaster)
 
 print("Done")
