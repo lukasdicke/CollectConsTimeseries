@@ -16,6 +16,7 @@ from DeltaXE import Deltaxe_client
 
 SUBSTRING_CONS_REPORT = "CONSUMPTION_REPORT"
 
+date_now = datetime.today()
 
 def gettimedifference():
     # time difference between UTC and Europe/Berlin
@@ -37,12 +38,8 @@ def getcontractsearchstring(contractdict):
 
     return ret
 
-
-def filenameconsreportAll():
-    return (datetime.today()).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + ".json"
-
 def filenameconsreportGridSpecific(grid):
-    return (datetime.today()).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + grid + ".json"
+    return date_now.strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + grid + ".json"
 
 def getPathConsReport():
     return "\\\\energycorp.com\\common\\divsede\\Operations\\Schedules\\Germany\\ConsumptionReportsPython\\"
@@ -121,8 +118,6 @@ pathConsReport = getPathConsReport()
 
 HousekeepingConsumptionReports(pathConsReport, SUBSTRING_CONS_REPORT)
 
-
-
 myDictGrids = GetListGrids()
 for grid in myDictGrids:
 
@@ -174,6 +169,7 @@ for grid in myDictGrids:
                     if timeseriesVolumes:
                         myDict = {"COUNTERPARTY": contracts["COUNTERPARTY"],
                                   "DELIVERY_DATE": (datetime.today()).strftime("%d.%m.%Y"),
+                                  "ReportTimestamp": date_now.strftime("%H:%M:%S"),
                                   "NAME": contracts["NAME"],
                                   "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
                                   "CONTROL_AREA": contracts["OUT_AREA"],
