@@ -4,19 +4,23 @@
 # parameters: {}
 # owner: "MCSO, Lukas Dicke"
 
-import pandas as pd
+import argparse
 from datetime import datetime
 from datetime import timedelta
+
+import pandas as pd
 from dateutil.relativedelta import relativedelta
 from pytz import timezone
+from pyxos.task import args
 
-from DeltaXE import Deltaxe_client
+#from DeltaXE import Deltaxe_client
 
-#from eva.ops.deltaXE import Deltaxe_client
+from eva.ops.deltaXE import Deltaxe_client
 
 SUBSTRING_CONS_REPORT = "CONSUMPTION_REPORT"
 
 date_now = datetime.today()
+
 
 def gettimedifference():
     # time difference between UTC and Europe/Berlin
@@ -38,8 +42,19 @@ def getcontractsearchstring(contractdict):
 
     return ret
 
-def filenameconsreportGridSpecific(grid):
-    return date_now.strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + grid + ".json"
+
+def filenameconsreportGridSpecific(grid, daysAhead):
+
+    deliverySpecificString = ""
+    if daysAhead == 0:
+        deliverySpecificString = "INTRADAY"
+    elif daysAhead == 1:
+        deliverySpecificString = "DAYAHEAD"
+    elif daysAhead == -1:
+        deliverySpecificString = "DAYAFTER"
+
+    return (date_now + timedelta(days=daysAhead)).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + grid + "_"+ deliverySpecificString +  ".json"
+
 
 def getPathConsReport():
     return "\\\\energycorp.com\\common\\divsede\\Operations\\Schedules\\Germany\\ConsumptionReportsPython\\"
@@ -52,22 +67,23 @@ def HousekeepingConsumptionReports(myPath, substringToFind):
     from datetime import datetime, timedelta
 
     filesToDelete = [f for f in listdir(myPath)
-                 if isfile(join(myPath, f))
-                 if substringToFind in f
-                 if (datetime.now() + timedelta(days=2)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=1)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=0)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=-1)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=-2)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=-3)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=-4)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=-5)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=-6)).strftime("%Y%m%d") not in f
-                 if (datetime.now() + timedelta(days=-7)).strftime("%Y%m%d") not in f
-                 ]
+                     if isfile(join(myPath, f))
+                     if substringToFind in f
+                     if (datetime.now() + timedelta(days=2)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=1)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=0)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=-1)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=-2)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=-3)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=-4)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=-5)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=-6)).strftime("%Y%m%d") not in f
+                     if (datetime.now() + timedelta(days=-7)).strftime("%Y%m%d") not in f
+                     ]
 
     for file in filesToDelete:
         FileDelete(join(myPath, file))
+
 
 def GetListGrids():
     myDictGrids = []
@@ -79,6 +95,7 @@ def GetListGrids():
 
     return myDictGrids
 
+
 def GetListContracts():
     myDictContracts = []
 
@@ -86,22 +103,22 @@ def GetListContracts():
     myDictContracts.append('IMBAsAMPuI')
     myDictContracts.append('IMBAsTENuI')
     myDictContracts.append('IMBAsTRNuI')
+    # myDictContracts.append('')
+    # myDictContracts.append('')
+    # myDictContracts.append('')
+    # myDictContracts.append('')
+    # myDictContracts.append('')
+    # myDictContracts.append('')
 
     return myDictContracts
 
-def GetUrlContractSearchSpecificContracts(grid,myDictContracts):
-   return "Contract?$" \
-                        + "filter=DATE_FROM lt " + (date_from.replace(tzinfo=None) + timedelta(days=0)).isoformat() + \
-                        "Z and DATE_TO ge " + (date_from.replace(tzinfo=None) + timedelta(days=1)).isoformat() + \
-                        "Z and (" + getcontractsearchstring(myDictContracts) + ") and OUT_AREA eq '" + grid + "'" + \
-                        " and STATUS ne 'DELETED'"
 
-def GetUrlContractSearchConsmaster(grid,myDictContracts):
-   return "Contract?$" \
-                        + "filter=DATE_FROM lt " + (date_from.replace(tzinfo=None) + timedelta(days=0)).isoformat() + \
-                        "Z and DATE_TO ge " + (date_from.replace(tzinfo=None) + timedelta(days=1)).isoformat() + \
-                        "Z and (" + getcontractsearchstring(myDictContracts) + ") and OUT_AREA eq '" + grid + "'" + \
-                        " and STATUS ne 'DELETED' and MODIFIED_DATE ge " + (date_from.replace(tzinfo=None) + timedelta(days=-2)).isoformat()
+def GetUrlContractSearchSpecificContracts(grid, myDictContracts, daysAhead):
+    return "Contract?$" \
+        + "filter=DATE_FROM lt " + (date_from.replace(tzinfo=None) + timedelta(days=daysAhead)).isoformat() + \
+        "Z and DATE_TO ge " + (date_from.replace(tzinfo=None) + timedelta(days=daysAhead + 1)).isoformat() + \
+        "Z and (" + getcontractsearchstring(myDictContracts) + ") and OUT_AREA eq '" + grid + "'" + \
+        " and STATUS ne 'DELETED'"
 
 
 begin = datetime.today() + timedelta(days=0)
@@ -119,71 +136,86 @@ pathConsReport = getPathConsReport()
 HousekeepingConsumptionReports(pathConsReport, SUBSTRING_CONS_REPORT)
 
 myDictGrids = GetListGrids()
-for grid in myDictGrids:
 
-    timeseriesVolumes = []
-    final_list = []
 
-    urlContractSearch = GetUrlContractSearchSpecificContracts(grid, GetListContracts())
+def GiveOutput(daysAhead):
+    for grid in myDictGrids:
 
-    #urlContractSearch = GetUrlContractSearchConsmaster(grid, myDictContracts)
+        timeseriesVolumes = []
+        final_list = []
 
-    responseContractSearch = deltaXE.get(urlContractSearch).json()
+        urlContractSearch = GetUrlContractSearchSpecificContracts(grid, GetListContracts(), daysAhead)
 
-    for contracts in responseContractSearch['value']:
+        # urlContractSearch = GetUrlContractSearchConsmaster(grid, myDictContracts)
 
-        contractID = str(contracts['CONTRACT_ID'])
-        urlContratLineSearch = "ContractLine?$filter=CONTRACT_ID eq " + contractID
-        responseContractLineSearch = deltaXE.get(urlContratLineSearch).json()
+        responseContractSearch = deltaXE.get(urlContractSearch).json()
 
-        for contractLines in responseContractLineSearch['value']:
+        for contracts in responseContractSearch['value']:
 
-            contractLineID = str(contractLines['CONTRACT_LINE_ID'])
-            urlContractPositionSearch = "ContractPosition?$filter=CONTRACT_LINE_ID eq " + contractLineID
+            contractID = str(contracts['CONTRACT_ID'])
+            urlContratLineSearch = "ContractLine?$filter=CONTRACT_ID eq " + contractID
+            responseContractLineSearch = deltaXE.get(urlContratLineSearch).json()
 
-            responseContractPositionSearch = deltaXE.get(urlContractPositionSearch).json()
+            for contractLines in responseContractLineSearch['value']:
 
-            for contractPosition in responseContractPositionSearch['value']:
+                contractLineID = str(contractLines['CONTRACT_LINE_ID'])
+                urlContractPositionSearch = "ContractPosition?$filter=CONTRACT_LINE_ID eq " + contractLineID
 
-                if contractPosition['POSITION_TYPE'] == 'QUANTITY':
+                responseContractPositionSearch = deltaXE.get(urlContractPositionSearch).json()
 
-                    dateTo = (date_from.replace(tzinfo=None) + timedelta(1) + timedelta(
-                        hours=time_difference)).isoformat()
-                    dateFrom = (date_from.replace(tzinfo=None) + timedelta(0) + timedelta(
-                        hours=time_difference)).isoformat()
+                for contractPosition in responseContractPositionSearch['value']:
 
-                    positionID = str(contractPosition['POSITION_ID'])
+                    if contractPosition['POSITION_TYPE'] == 'QUANTITY':
 
-                    # Known issue/feature: DateFrom & DateTo are switched
-                    urlContractLines = "TimeSeriesQuarterHour?$filter=POSITION_ID eq " + positionID + \
-                                       " and DATE_FROM lt " + dateTo + "Z and DATE_TO gt " + dateFrom + "Z"
-                    responseContractLines = deltaXE.get(urlContractLines).json()
+                        dateTo = (date_from.replace(tzinfo=None) + timedelta(1 + daysAhead) + timedelta(
+                            hours=time_difference)).isoformat()
+                        dateFrom = (date_from.replace(tzinfo=None) + timedelta(0 + daysAhead) + timedelta(
+                            hours=time_difference)).isoformat()
 
-                    timeseriesVolumes = []
-                    for contractLine in responseContractLines['value']:
-                        if contractLine['VALUE'] is None:
-                            pass
-                        else:
-                            # All values will be positive
-                            timeseriesVolumes.append(contractLine["VALUE"])
-                    if timeseriesVolumes:
-                        myDict = {"COUNTERPARTY": contracts["COUNTERPARTY"],
-                                  "DELIVERY_DATE": (datetime.today()).strftime("%d.%m.%Y"),
-                                  "ReportTimestamp": date_now.strftime("%H:%M:%S"),
-                                  "NAME": contracts["NAME"],
-                                  "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
-                                  "CONTROL_AREA": contracts["OUT_AREA"],
-                                  "BALANCE": contracts["BALANCE"],
-                                  "AGG_VOLUME": (sum(timeseriesVolumes) / 4),
-                                  "VOLUME_TS": timeseriesVolumes}
+                        positionID = str(contractPosition['POSITION_ID'])
 
-                        final_list.append(myDict)
+                        # Known issue/feature: DateFrom & DateTo are switched
+                        urlContractLines = "TimeSeriesQuarterHour?$filter=POSITION_ID eq " + positionID + \
+                                           " and DATE_FROM lt " + dateTo + "Z and DATE_TO gt " + dateFrom + "Z"
+                        responseContractLines = deltaXE.get(urlContractLines).json()
 
-    df = pd.DataFrame.from_dict(final_list)
+                        timeseriesVolumes = []
+                        for contractLine in responseContractLines['value']:
+                            if contractLine['VALUE'] is None:
+                                pass
+                            else:
+                                # All values will be positive
+                                timeseriesVolumes.append(contractLine["VALUE"])
+                        if timeseriesVolumes:
+                            myDict = {"COUNTERPARTY": contracts["COUNTERPARTY"],
+                                      "DELIVERY_DATE": (datetime.today() + timedelta(daysAhead)).strftime("%d.%m.%Y"),
+                                      "REPORT_TIMESTAMP": date_now.strftime("%H:%M:%S"),
+                                      "NAME": contracts["NAME"],
+                                      "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
+                                      "CONTROL_AREA": contracts["OUT_AREA"],
+                                      "BALANCE": contracts["BALANCE"],
+                                      "AGG_VOLUME": round((sum(timeseriesVolumes) / 4), 3),
+                                      "VOLUME_TS": timeseriesVolumes}
 
-    path = pathConsReport + filenameconsreportGridSpecific(grid)
+                            final_list.append(myDict)
 
-    # df.to_csv(path, sep=";")
-    df.to_json(path, orient='records', indent=True)
+        df = pd.DataFrame.from_dict(final_list)
+
+        path = pathConsReport + filenameconsreportGridSpecific(grid, daysAhead)
+
+        # df.to_csv(path, sep=";")
+        df.to_json(path, orient='records', indent=True)
+
+print(args[0] + ':' + args[1])
+
+# if args == None:
+    # daysAhead = 0
+# else:
+
+daysAhead = int(args[1])
+
+print("Delivery day: " + (datetime.today() + timedelta(daysAhead)).strftime("%d.%m.%Y") + " chosen. Script started.")
+
+GiveOutput(daysAhead)
 
 print("Done")
