@@ -7,10 +7,12 @@
 """
 
 Usage:
-    example /PIXOS/EVA_Jobs/ops/CollectConsTimeseriesDeltaXE --daysAhead=<int>
+    CollectConsTimeseriesDeltaXE_test.py <job_path> --daysAhead=<int>
+
+Options:
+    --daysAhead=<int> rel. days to today => Delivery-Day [default: 1].
 
 """
-
 
 import argparse
 from datetime import datetime
@@ -20,25 +22,13 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 from pytz import timezone
 from pyxos.task import args
+import sys
 
 from DeltaXE import Deltaxe_client
 
 #from eva.ops.deltaXE import Deltaxe_client
 
-CONST_SUBSTRING_CONS_REPORT = "CONSUMPTION_REPORT"
-
-
-CONST_JSON_COUNTERPARTY = "COUNTERPARTY"
-CONST_JSON_DELIVERY_DATE = "DELIVERY_DATE"
-CONST_JSON_REPORT_TIMESTAMP = "REPORT_TIMESTAMP"
-CONST_JSON_NAME = "NAME"
-CONST_JSON_EXTERNAL_CONTRACT_ID = "EXTERNAL_CONTRACT_ID"
-CONST_JSON_CONTROL_AREA = "CONTROL_AREA"
-CONST_JSON_BALANCE = "BALANCE"
-CONST_JSON_AGG_VOLUME = "AGG_VOLUME (MWh)"
-CONST_JSON_MIN_VOLUME = "MIN_VOLUME (MW)"
-CONST_JSON_MAX_VOLUME = "MAX_VOLUME (MW)"
-CONST_JSON_VOLUME_TS = "VOLUME_TS"
+SUBSTRING_CONS_REPORT = "CONSUMPTION_REPORT"
 
 date_now = datetime.today()
 
@@ -74,7 +64,7 @@ def filenameconsreportGridSpecific(grid, daysAhead):
         deliverySpecificString = "DAYAFTER"
 
     return (date_now + timedelta(days=daysAhead)).strftime(
-        "%Y%m%d_%H%M%S") + "_" + CONST_SUBSTRING_CONS_REPORT + "_" + grid + "_" + deliverySpecificString + ".json"
+        "%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + grid + "_" + deliverySpecificString + ".json"
 
 
 def getPathConsReport():
@@ -154,7 +144,7 @@ deltaXE = Deltaxe_client()
 
 pathConsReport = getPathConsReport()
 
-HousekeepingConsumptionReports(pathConsReport, CONST_SUBSTRING_CONS_REPORT)
+HousekeepingConsumptionReports(pathConsReport, SUBSTRING_CONS_REPORT)
 
 myDictGrids = GetListGrids()
 
@@ -206,18 +196,17 @@ def GiveOutput(daysAhead):
                                 # All values will be positive
                                 timeseriesVolumes.append(contractLine["VALUE"])
                         if timeseriesVolumes:
-                            myDict = {CONST_JSON_COUNTERPARTY: contracts["COUNTERPARTY"],
-                                      CONST_JSON_DELIVERY_DATE: (datetime.today() + timedelta(daysAhead)).strftime("%d.%m.%Y"),
-                                      CONST_JSON_REPORT_TIMESTAMP: date_now.strftime("%H:%M:%S"),
-                                      CONST_JSON_NAME: contracts["NAME"],
-                                      CONST_JSON_EXTERNAL_CONTRACT_ID: contracts["EXTERNAL_ID"],
-                                      CONST_JSON_CONTROL_AREA: contracts["OUT_AREA"],
-                                      CONST_JSON_BALANCE: contracts["BALANCE"],
-                                      CONST_JSON_AGG_VOLUME: round((sum(timeseriesVolumes) / 4), 3),
-                                      CONST_JSON_MIN_VOLUME: round(min(timeseriesVolumes), 3),
-                                      CONST_JSON_MAX_VOLUME: round(max(timeseriesVolumes), 3),
-                                      CONST_JSON_VOLUME_TS: timeseriesVolumes}
-
+                            myDict = {"COUNTERPARTY": contracts["COUNTERPARTY"],
+                                      "DELIVERY_DATE": (datetime.today() + timedelta(daysAhead)).strftime("%d.%m.%Y"),
+                                      "REPORT_TIMESTAMP": date_now.strftime("%H:%M:%S"),
+                                      "NAME": contracts["NAME"],
+                                      "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
+                                      "CONTROL_AREA": contracts["OUT_AREA"],
+                                      "BALANCE": contracts["BALANCE"],
+                                      "AGG_VOLUME (MWh)": round((sum(timeseriesVolumes) / 4), 3),
+                                      "MIN_VOLUME (MW)": round(min(timeseriesVolumes), 3),
+                                      "MAX_VOLUME (MW)": round(max(timeseriesVolumes), 3),
+                                      "VOLUME_TS": timeseriesVolumes}
 
                             final_list.append(myDict)
 
@@ -228,13 +217,8 @@ def GiveOutput(daysAhead):
         # df.to_csv(path, sep=";")
         df.to_json(path, orient='records', indent=True)
 
-
-print(args[0] + ':' + args[1])
-
-if args == None:
-    daysAhead = 0
-else:
-    daysAhead = int(args[1])
+daysAhead = 0
+#daysAhead = int(daysAhead)
 
 print("Delivery day: " + (datetime.today() + timedelta(daysAhead)).strftime("%d.%m.%Y") + " chosen. Script started.")
 

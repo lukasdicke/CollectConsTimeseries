@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email import encoders
 import smtplib
 from pathlib import Path
+from datetime import datetime, timedelta
 
 SUBSTRING_CONS_REPORT = "CONSUMPTION_REPORT"
 
@@ -104,16 +105,16 @@ def filenameconsreportAll(daysAhead):
     elif daysAhead == -1:
         deliverySpecificString = "DAYAFTER"
 
-    return (datetime.today() + daysAhead(days=daysAhead)).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + deliverySpecificString + ".json"
+    return (datetime.today() + timedelta(days=daysAhead)).strftime("%Y%m%d_%H%M%S") + "_" + SUBSTRING_CONS_REPORT + "_" + deliverySpecificString + ".json"
 
 def getPathConsReport():
-    #return "\\\\energycorp.com\\common\\divsede\\Operations\\Schedules\\Germany\\ConsumptionReportsPython\\"
-    return "\\\\energycorp.com\\common\\divsede\\Operations\\Schedules\\Germany\\ConsumptionReportsPython\\Test\\"
+    return "\\\\energycorp.com\\common\\divsede\\Operations\\Schedules\\Germany\\ConsumptionReportsPython\\"
+    #return "\\\\energycorp.com\\common\\divsede\\Operations\\Schedules\\Germany\\ConsumptionReportsPython\\Test\\"
 
 def GetConsumptionReport(myPath, substringToFind, grid, daysAhead):
     from os import listdir
     from os.path import isfile, join
-    from datetime import datetime, timedelta
+
     consReports = []
 
     deliverySpecificString = ""
@@ -206,7 +207,7 @@ def GetMaxReportedAggConsVolume(myConsReports, minmax):
             tsPointReportAggrVolume.Volume = compare1
             tsPointReportAggrVolume.Timestamp = contract[CONST_JSON_REPORT_TIMESTAMP]
 
-        return tsPointReportAggrVolume
+    return tsPointReportAggrVolume
 
 def GetAvgConsVolume(myConsReports):
 
@@ -230,79 +231,86 @@ def GetAvgConsVolume(myConsReports):
     else:
         return None
 
+def GetGridInfoHtml(grid, avg, tsPointMaxSingleQtrHr, tsPointMaxReportAggrVolume,tsPointMinReportAggrVolume, lenConsReports):
+
+    ret=""
+    maxReportAggrVolumeDetails = ""
+    if tsPointMaxReportAggrVolume.Volume > 0:
+        maxReportAggrVolumeDetails = " (Report time: " + str(tsPointMaxReportAggrVolume.Timestamp) + ")"
+
+    minReportAggrVolumeDetails = ""
+    if tsPointMinReportAggrVolume.Volume > 0:
+        minReportAggrVolumeDetails = " (Report time: " + str(tsPointMinReportAggrVolume.Timestamp) + ")"
+
+    maxSingleQtrHrDetails = ""
+    if tsPointMaxSingleQtrHr.Volume > 0:
+        maxSingleQtrHrDetails = " (Period: " + str(tsPointMaxSingleQtrHr.Period) + ", Report time: " + str(
+            tsPointMaxSingleQtrHr.Timestamp) + ")"
+
+    avgString = 'Average cons volume over ' + str(lenConsReports) + ' reports: ' + str(
+        round(avg, 3)) + ' MWh'
+
+    maxSingleQtrHrStr = 'Max single quarter-hourly cons volume: ' + str(
+        tsPointMaxSingleQtrHr.Volume) + ' MWh' + maxSingleQtrHrDetails
+
+    maxReportAggrVolumeStr = 'Max aggregated cons volume reported: ' + str(
+        round(tsPointMaxReportAggrVolume.Volume, 3)) + ' MWh' + maxReportAggrVolumeDetails
+
+    ret = ret + grid + ":" + "<br>"
+    ret = ret + avgString + "<br>"
+    ret = ret + maxSingleQtrHrStr + "<br>"
+    ret = ret + maxReportAggrVolumeStr + "<br>"
+    ret=ret + "<br>" + "<br>"
+
+    # minReportAggrVolumeStr = grid + ': Min aggregated cons volume reported: ' + str(
+    #     round(tsPointMinReportAggrVolume.Volume, 3)) + ' MWh' + minReportAggrVolumeDetails
+
+
+    print(ret)
+
+    return ret
+
+def GetEmailBody(daysAhead):
+
+    myDictGrids = GetListGrids()
+    ret=""
+    for grid in myDictGrids:
+
+        myConsReports = GetConsumptionReport(getPathConsReport(), SUBSTRING_CONS_REPORT, grid, daysAhead)
+
+        tsPointMaxSingleQtrHr = TsPoint(0, 0, "")
+        tsPointMaxReportAggrVolume = TsPoint(0, 0, "")
+        tsPointMinReportAggrVolume = TsPoint(0, 0, "")
+
+        lenReports = len(myConsReports)
+
+        if lenReports > 0:
+            avg = GetAvgConsVolume(myConsReports)
+            tsPointMaxSingleQtrHr = GetMaxPointSingleQtrHours(myConsReports)
+            tsPointMaxReportAggrVolume = GetMaxReportedAggConsVolume(myConsReports, "max")
+            tsPointMinReportAggrVolume = GetMaxReportedAggConsVolume(myConsReports, "min")
+
+            ret = ret + str(GetGridInfoHtml(grid, avg, tsPointMaxSingleQtrHr, tsPointMaxReportAggrVolume,
+                                        tsPointMinReportAggrVolume, len(myConsReports)))
+
+    return ret
+
 daysAhead=-1
 #daysAhead=0
 
-myDictGrids = GetListGrids()
-for grid in myDictGrids:
+recipientsTo=["lukas.dicke@statkraft.de"]
 
-    myConsReports = GetConsumptionReport(getPathConsReport(), SUBSTRING_CONS_REPORT, grid, daysAhead)
+emailBody = ""
+ret  = ""
+deliveryday = (datetime.today() + timedelta(days=daysAhead)).strftime("%d.%m.%Y")
 
-    # maxConsVolumeSingleQtrHr = 0
-    # maxAggrConsVolume = 0
-    # timestampMaxAggrConsVolume = 0
-    # reportsMin = 0
-    # sumReports = 0
-    tsPointMaxSingleQtrHr = TsPoint(0, 0, "")
-    tsPointMaxReportAggrVolume = TsPoint(0, 0, "")
-    # txPointMin = TsPoint(0, 0, "")
-    # for consReport in myConsReports:
-    #
-    #     # Opening JSON file
-    #     f = open(consReport)
-    #
-    #     cons = json.load(f)
-    #
-    #     aggrTimeseriesConsReport = [0] * 96
-    #     for contract in cons:
-    #         timeseriesFrameContract = contract[CONST_JSON_VOLUME_TS]
-    #
-    #         sumReports = sumReports + float(contract[CONST_JSON_AGG_VOLUME])
-    #         for x in enumerate(timeseriesFrameContract):
-    #             aggrTimeseriesConsReport[x[0]] = aggrTimeseriesConsReport[x[0]] + float(x[1])
-    #
-    #     localmax = 0
-    #     for x in enumerate( aggrTimeseriesConsReport):
-    #         if float(x[1]) > localmax and float(x[1]) > maxConsVolumeSingleQtrHr:
-    #             localmax = float(x[1])
-    #             tsPointMaxSingleQtrHr.Period = GetTimestamp(x[0] + 1)
-    #             # tsPointMaxSingleQtrHr.Volume = localmax
-    #             tsPointMaxSingleQtrHr.Timestamp = contract[CONST_JSON_REPORT_TIMESTAMP]
-    #
-    #     if localmax > maxConsVolumeSingleQtrHr:
-    #         maxConsVolumeSingleQtrHr = localmax
-    #         tsPointMaxSingleQtrHr.Volume = maxConsVolumeSingleQtrHr
-    #
-    #     sumAggrConsReport = sum(aggrTimeseriesConsReport)
-    #     if sumAggrConsReport > maxAggrConsVolume:
-    #         maxAggrConsVolume = sumAggrConsReport
-    #         tsPointMaxReportAggrVolume.Volume = maxAggrConsVolume
-    #         tsPointMaxReportAggrVolume.Timestamp = contract[CONST_JSON_REPORT_TIMESTAMP]
+ret = GetEmailBody(daysAhead)
 
-        # localmin = min(aggrTimeseriesConsReport)
-        # if localmin < reportsMin:
-        #     reportsMin = localmin
+header = "Hi," + "<br>" + "the following INTRASED trading long imbalance (delivery: '" + deliveryday + "') is scheduled on CONSMASTER:" + "<br>" + "<br>" + ret
 
-    lenReports = len(myConsReports)
-
-    if lenReports > 0:
-
-        avg = GetAvgConsVolume(myConsReports)
-        tsPointMaxSingleQtrHr = GetMaxPointSingleQtrHours(myConsReports)
-        tsPointMaxReportAggrVolume = GetMaxReportedAggConsVolume(myConsReports,"max")
-
-        print(grid + ': Average cons volume over ' + str(len(myConsReports)) + ' reports: ' + str(round(avg,3)) + ' MWh')
-
-        maxSingleQtrHrDetails = ""
-        if tsPointMaxSingleQtrHr.Volume > 0:
-            maxSingleQtrHrDetails = " (Period: " + str(tsPointMaxSingleQtrHr.Period) + ", Report time: " + str(tsPointMaxSingleQtrHr.Timestamp) + ")"
-
-        maxReportAggrVolumeDetails = ""
-        if tsPointMaxReportAggrVolume.Volume > 0:
-            maxReportAggrVolumeDetails = " (Report time: " + str(tsPointMaxReportAggrVolume.Timestamp) + ")"
-
-        print(grid + ': Max single quarter-hourly cons volume: ' + str(tsPointMaxSingleQtrHr.Volume) + ' MWh' + maxSingleQtrHrDetails)
-
-        print(grid + ': Max aggregated cons volume reported: ' + str(round(tsPointMaxReportAggrVolume.Volume, 3)) + ' MWh' + maxReportAggrVolumeDetails)
-
-        #print(grid + ': Min cons volume of ' + str(len(myConsReports)) + ' reports: ' + str(round(reportsMin, 3)) + ' MWh')
+SendMailPythonServer(send_to=recipientsTo,
+                     send_cc=[],
+                     send_bcc=[],
+                     subject="Test",
+                     message=header,
+                     files=[])
