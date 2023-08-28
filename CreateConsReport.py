@@ -306,7 +306,7 @@ deliveryday = (datetime.today() + timedelta(days=daysAhead)).strftime("%d.%m.%Y"
 
 ret = GetEmailBody(daysAhead)
 
-header = "Hi," + "<br>" + "the following INTRASED trading long imbalance (delivery: '" + deliveryday + "') is scheduled on CONSMASTER:" + "<br>" + "<br>" + ret
+header = "Hi," + "<br>" + "there is a non-zero long imbalance (delivery:" + deliveryday + ") scheduled against INTRASED CONSMASTER (11XFC-CONS-----0):" + "<br>" + "<br>" + ret
 
 SendMailPythonServer(send_to=recipientsTo,
                      send_cc=[],
