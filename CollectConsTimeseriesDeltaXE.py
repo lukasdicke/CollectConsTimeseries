@@ -7,10 +7,10 @@
 """
 
 Usage:
-    CollectConsTimeseriesDeltaXE_test.py <job_path> --daysAhead=<int>
+    CollectConsTimeseriesDeltaXE.py <job_path> --daysAhead=<int>
 
 Options:
-    --daysAhead=<int> rel. days to today => Delivery-Day [default: 1].
+    --daysAhead=<int> rel. days to today => Delivery-Day.
 
 """
 
@@ -24,9 +24,9 @@ from pytz import timezone
 from pyxos.task import args
 import sys
 
-from DeltaXE import Deltaxe_client
+# from DeltaXE import Deltaxe_client
 
-#from eva.ops.deltaXE import Deltaxe_client
+from eva.ops.deltaXE import Deltaxe_client
 
 SUBSTRING_CONS_REPORT = "CONSUMPTION_REPORT"
 
@@ -217,8 +217,10 @@ def GiveOutput(daysAhead):
         # df.to_csv(path, sep=";")
         df.to_json(path, orient='records', indent=True)
 
-daysAhead = 0
-#daysAhead = int(daysAhead)
+
+# print('DaysAhead: ' + sys.argv[1][sys.argv[1].index("=")+1:])
+
+daysAhead = int(daysAhead)
 
 print("Delivery day: " + (datetime.today() + timedelta(daysAhead)).strftime("%d.%m.%Y") + " chosen. Script started.")
 
