@@ -707,7 +707,7 @@ def GetGridReports(daysAhead):
 
     return myGridReports
 
-#daysAhead=-3
+daysAhead=-3
 daysAhead = int(daysAhead)
 
 recipientsTo = ["lukas.dicke@statkraft.de", "lukas.dicke@statkraft.de"]
