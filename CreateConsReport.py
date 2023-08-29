@@ -350,8 +350,7 @@ gridReports = GetGridReports(daysAhead)
 for grid in gridReports:
     emailBody = emailBody + grid.Message
 
-if 1 == 1:
-#if emailBody != "":
+if emailBody != "":
 
     header = "Hi," + "<br>" + "there is at least one grid having a <b>non-zero long (trading) imbalance</b> (delivery:" + deliveryday + "), which is scheduled against INTRASED CONSMASTER (11XFC-CONS-----0):" + "<br>" + "<br>"
 
