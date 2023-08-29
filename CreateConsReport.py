@@ -172,14 +172,15 @@ def GetListGrids():
     return myDictGrids
 
 class TsPoint:
-  def __init__(self, volume, period, timestamp):
+  def __init__(self, volume, period, timestamp, filename):
     self.Volume = volume
     self.Period = period
     self.Timestamp = timestamp
+    self.Filename = filename
 
 def GetMaxPointSingleQtrHours(myConsReports):
 
-    tsPointSingleQtrHr = TsPoint(0, 0, "")
+    tsPointSingleQtrHr = TsPoint(0, 0, "","")
     for consReport in myConsReports:
 
         # Opening JSON file
@@ -200,11 +201,12 @@ def GetMaxPointSingleQtrHours(myConsReports):
                 tsPointSingleQtrHr.Period = GetTimestamp(tuple[0] + 1)
                 tsPointSingleQtrHr.Timestamp = contract[CONST_JSON_REPORT_TIMESTAMP]
                 tsPointSingleQtrHr.Volume = maxConsVolumeSingleQtrHr
+                tsPointSingleQtrHr.Filename = consReport
 
     return tsPointSingleQtrHr
 
 def GetMaxReportedAggConsVolume(myConsReports, minmax):
-    tsPointReportAggrVolume = TsPoint(0, 0, "")
+    tsPointReportAggrVolume = TsPoint(0, 0, "","")
 
     for consReport in myConsReports:
 
@@ -229,6 +231,7 @@ def GetMaxReportedAggConsVolume(myConsReports, minmax):
         if compare1 > compare2:
             tsPointReportAggrVolume.Volume = compare1
             tsPointReportAggrVolume.Timestamp = contract[CONST_JSON_REPORT_TIMESTAMP]
+            tsPointReportAggrVolume.Filename = consReport
 
     return tsPointReportAggrVolume
 
@@ -269,6 +272,9 @@ class GridReport:
     else:
         self.Zero = False
 
+def GetHyperlink(filename):
+    return "<a href=" + filename + ">Click for details</a>"
+
 def GetGridInfoHtml(gridReport):
 
     if gridReport.Zero:
@@ -277,22 +283,21 @@ def GetGridInfoHtml(gridReport):
     ret=""
     maxReportAggrVolumeDetails = ""
     if gridReport.MaxReportAggrVolume.Volume > 0:
-        maxReportAggrVolumeDetails = " (Report time: " + str(gridReport.MaxReportAggrVolume.Timestamp) + ")"
+        maxReportAggrVolumeDetails = " (Report time: " + str(gridReport.MaxReportAggrVolume.Timestamp) + " " + GetHyperlink(gridReport.MaxReportAggrVolume.Filename) + ")"
 
     minReportAggrVolumeDetails = ""
     if gridReport.MinReportAggrVolume.Volume > 0:
-        minReportAggrVolumeDetails = " (Report time: " + str(gridReport.MinReportAggrVolume.Timestamp) + ")"
+        minReportAggrVolumeDetails = " (Report time: " + str(gridReport.MinReportAggrVolume.Timestamp) + " " + GetHyperlink(gridReport.MinReportAggrVolume.Filename) + ")"
 
     maxSingleQtrHrDetails = ""
     if gridReport.MaxSingleQtrHrVolume.Volume > 0:
-        maxSingleQtrHrDetails = " (Period: " + str(gridReport.MaxSingleQtrHrVolume.Period) + ", Report time: " + str(
-            gridReport.MaxSingleQtrHrVolume.Timestamp) + ")"
+        maxSingleQtrHrDetails = " (Period: " + str(gridReport.MaxSingleQtrHrVolume.Period) + ", Report time: " + str(gridReport.MaxSingleQtrHrVolume.Timestamp) + " " + GetHyperlink(gridReport.MaxReportAggrVolume.Filename) + ")"
 
     avgString = 'Average cons volume over ' + str(gridReport.AmountReports) + ' reports: ' + str(
         round(gridReport.Average, 3)) + ' MWh'
 
     maxSingleQtrHrStr = 'Max single quarter-hourly cons volume: ' + str(
-        gridReport.MaxSingleQtrHrVolume.Volume) + ' MWh' + maxSingleQtrHrDetails
+        gridReport.MaxSingleQtrHrVolume.Volume) + ' MW' + maxSingleQtrHrDetails
 
     maxReportAggrVolumeStr = 'Max aggregated cons volume reported: ' + str(
         round(gridReport.MaxReportAggrVolume.Volume, 3)) + ' MWh' + maxReportAggrVolumeDetails
@@ -338,7 +343,7 @@ def GetGridReports(daysAhead):
 #daysAhead=-4
 daysAhead = int(daysAhead)
 
-recipientsTo = ["marina.tebeck@statkraft.com", "martin.gebauer@statkraft.com", "marcel.grigo@statkraft.de", "malte.schwoon@statkraft.com"]
+ecipientsTo = ["marina.tebeck@statkraft.com", "martin.gebauer@statkraft.com", "marcel.grigo@statkraft.de", "malte.schwoon@statkraft.com"]
 #recipientsTo = ["lukas.dicke@statkraft.de"]
 recipientsCc = ["Ozan.Sahin@statkraft.com", "lukas.dicke@statkraft.de"]
 #recipientsCc=[]
@@ -356,7 +361,7 @@ if emailBody != "":
 
     header = "Hi," + "<br>" + "there is at least one grid having a <b>non-zero long (trading) imbalance</b> (delivery:" + deliveryday + "), which is scheduled against INTRASED CONSMASTER (11XFC-CONS-----0):" + "<br>" + "<br>"
 
-    end = "<p><a href=" + getPathConsReport() + ">Click here for detailed consumption reports</a></p>" + "<br>" + "<br>" + "BR" + "<br>" + "<br>" + "Statkraft Operations"
+    end = "<p><a href=" + getPathConsReport() + ">Click here for an overview of consumption reports</a></p>" + "<br>" + "<br>" + "BR" + "<br>" + "<br>" + "Statkraft Operations"
 
     emailBody = header + emailBody + end
 
