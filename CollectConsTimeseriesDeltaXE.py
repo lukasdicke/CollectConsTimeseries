@@ -198,7 +198,7 @@ def GiveOutput(daysAhead):
                         if timeseriesVolumes:
                             myDict = {"COUNTERPARTY": contracts["COUNTERPARTY"],
                                       "DELIVERY_DATE": (datetime.today() + timedelta(daysAhead)).strftime("%d.%m.%Y"),
-                                      "REPORT_TIMESTAMP": date_now.strftime("%d.%m.%Y" "%H:%M:%S"),
+                                      "REPORT_TIMESTAMP": date_now.strftime("%d.%m.%Y %H:%M:%S"),
                                       "NAME": contracts["NAME"],
                                       "EXTERNAL_CONTRACT_ID": contracts["EXTERNAL_ID"],
                                       "CONTROL_AREA": contracts["OUT_AREA"],
