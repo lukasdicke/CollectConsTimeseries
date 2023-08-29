@@ -343,7 +343,7 @@ def GetGridReports(daysAhead):
 #daysAhead=-4
 daysAhead = int(daysAhead)
 
-ecipientsTo = ["marina.tebeck@statkraft.com", "martin.gebauer@statkraft.com", "marcel.grigo@statkraft.de", "malte.schwoon@statkraft.com"]
+recipientsTo = ["marina.tebeck@statkraft.com", "martin.gebauer@statkraft.com", "marcel.grigo@statkraft.de", "malte.schwoon@statkraft.com"]
 #recipientsTo = ["lukas.dicke@statkraft.de"]
 recipientsCc = ["Ozan.Sahin@statkraft.com", "lukas.dicke@statkraft.de"]
 #recipientsCc=[]
