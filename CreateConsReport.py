@@ -335,11 +335,13 @@ def GetGridReports(daysAhead):
 
     return myGridReports
 
-# #daysAhead=-3
-# daysAhead = int(daysAhead)
+#daysAhead=-4
+daysAhead = int(daysAhead)
 
 recipientsTo = ["marina.tebeck@statkraft.com", "martin.gebauer@statkraft.com", "marcel.grigo@statkraft.de", "malte.schwoon@statkraft.com"]
+#recipientsTo = ["lukas.dicke@statkraft.de"]
 recipientsCc = ["Ozan.Sahin@statkraft.com", "lukas.dicke@statkraft.de"]
+#recipientsCc=[]
 
 emailBody = ""
 gridReports = []
@@ -354,7 +356,7 @@ if emailBody != "":
 
     header = "Hi," + "<br>" + "there is at least one grid having a <b>non-zero long (trading) imbalance</b> (delivery:" + deliveryday + "), which is scheduled against INTRASED CONSMASTER (11XFC-CONS-----0):" + "<br>" + "<br>"
 
-    end = "<br>" + "<br>" + "BR" + "<br>" + "<br>" + "Statkraft Operations"
+    end = "<p><a href=" + getPathConsReport() + ">Click here for detailed consumption reports</a></p>" + "<br>" + "<br>" + "BR" + "<br>" + "<br>" + "Statkraft Operations"
 
     emailBody = header + emailBody + end
 
